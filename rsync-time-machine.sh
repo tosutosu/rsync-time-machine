@@ -11,18 +11,50 @@ HOST=$(hostname)
 DATE_FORMAT=$(date "+%Y-%m-%d-%H%M%S")
 CURRENT_YEAR=$(date +%Y)
 CURRENT_MONTH=$(date +%m)
-RSYNC_OPTIONS="--archive --partial --progress --human-readable"
+RSYNC_OPTIONS="-E --archive --partial"
 
 # Use absolute paths. Relative paths tend to break the hard linking advantage of rsync.
 # Paths can include spaces as long as variable contents are double quoted
-SOURCE="[absolute path to source directory]"
-DESTINATION="[absolute path to backup destination]/$HOST"
+#SOURCE="[absolute path to source directory]"
+#DESTINATION="[absolute path to backup destination]/$HOST"
+#DESTINATION_VOLUME="[absolute path to backup volume]"
+#EXCLUDE="[option. absolute path to exclude ]" 
 
 # --- Main Program --- #
+
+## check parameter
+check="true"
+if ! source ~/bin/echo_log.sh ; then
+  check="false"
+fi
+if [ -z "$SOURCE" ]; then
+  log_error "ソースディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION" ]; then
+  log_error "バックアップディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION_VOLUME" ] ; then
+  log_error "バックアップ先ボリュームが指定されていません"
+  check="false"
+else
+  if [ ! -d "$DESTINATION_VOLUME" ] ; then
+    ## ボリュームがマウントされていない.
+    check="false"
+  fi
+fi
+if [ "$check" = "false" ]; then
+    exit 1
+fi
 
 # Create destination if it does not exist
 if [[ ! -d "$DESTINATION" ]] ; then
   mkdir -p "$DESTINATION"
+fi
+
+if [ "${EXCLUDE:+xxx}" = "xxx" ]; then
+  EXCLUDE="--exclude-from=${EXCLUDE}"
 fi
 
 # Make inital backup if Latest does not exist, otherwise only copy what has changed
@@ -30,13 +62,13 @@ fi
 if [[ ! -L "$DESTINATION"/Latest ]] ; then
   rsync $RSYNC_OPTIONS \
                 --delete \
-                --exclude-from=$SOURCE/.rsync/exclude \
+                "$EXCLUDE" \
                 "$SOURCE" "$DESTINATION"/$DATE_FORMAT
 else
   rsync $RSYNC_OPTIONS \
                --delete \
                --delete-excluded \
-               --exclude-from=$SOURCE/.rsync/exclude \
+               "$EXCLUDE" \
                --link-dest="$DESTINATION"/Latest \
                "$SOURCE" "$DESTINATION"/$DATE_FORMAT
 fi
