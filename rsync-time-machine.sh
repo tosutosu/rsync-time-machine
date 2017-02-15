@@ -18,6 +18,7 @@ RSYNC_OPTIONS="-E --archive --partial"
 #SOURCE="[absolute path to source directory]"
 #DESTINATION="[absolute path to backup destination]/$HOST"
 #DESTINATION_VOLUME="[absolute path to backup volume]"
+#EXCLUDE="[option. absolute path to exclude ]" 
 
 # --- Main Program --- #
 
@@ -52,18 +53,22 @@ if [[ ! -d "$DESTINATION" ]] ; then
   mkdir -p "$DESTINATION"
 fi
 
+if [ "${EXCLUDE:+xxx}" = "xxx" ]; then
+  EXCLUDE="--exclude-from=${EXCLUDE}"
+fi
+
 # Make inital backup if Latest does not exist, otherwise only copy what has changed
 # and hard link to files that are the same
 if [[ ! -L "$DESTINATION"/Latest ]] ; then
   rsync $RSYNC_OPTIONS \
                 --delete \
-                --exclude-from=$SOURCE/.rsync/exclude \
+                "${EXCLUDE}" \
                 "$SOURCE" "$DESTINATION"/$DATE_FORMAT
 else
   rsync $RSYNC_OPTIONS \
                --delete \
                --delete-excluded \
-               --exclude-from=$SOURCE/.rsync/exclude \
+               "${EXCLUDE}" \
                --link-dest="$DESTINATION"/Latest \
                "$SOURCE" "$DESTINATION"/$DATE_FORMAT
 fi
