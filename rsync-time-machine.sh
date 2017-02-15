@@ -20,6 +20,32 @@ DESTINATION="[absolute path to backup destination]/$HOST"
 
 # --- Main Program --- #
 
+## check parameter
+check="true"
+if ! source ~/bin/echo_log.sh ; then
+  check="false"
+fi
+if [ -z "$SOURCE" ]; then
+  log_error "ソースディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION" ]; then
+  log_error "バックアップディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION_VOLUME" ] ; then
+  log_error "バックアップ先ボリュームが指定されていません"
+  check="false"
+else
+  if [ ! -d "$DESTINATION_VOLUME" ] ; then
+    ## ボリュームがマウントされていない.
+    check="false"
+  fi
+fi
+if [ "$check" = "false" ]; then
+    exit 1
+fi
+
 # Create destination if it does not exist
 if [[ ! -d "$DESTINATION" ]] ; then
   mkdir -p "$DESTINATION"
