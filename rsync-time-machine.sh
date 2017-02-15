@@ -15,8 +15,9 @@ RSYNC_OPTIONS="--archive --partial --progress --human-readable"
 
 # Use absolute paths. Relative paths tend to break the hard linking advantage of rsync.
 # Paths can include spaces as long as variable contents are double quoted
-SOURCE="[absolute path to source directory]"
-DESTINATION="[absolute path to backup destination]/$HOST"
+#SOURCE="[absolute path to source directory]"
+#DESTINATION="[absolute path to backup destination]/$HOST"
+#DESTINATION_VOLUME="[absolute path to backup volume]"
 
 # --- Main Program --- #
 
