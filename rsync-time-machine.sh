@@ -15,7 +15,7 @@ RSYNC_OPTIONS="-E --archive --partial"
 
 # Use absolute paths. Relative paths tend to break the hard linking advantage of rsync.
 # Paths can include spaces as long as variable contents are double quoted
-#SOURCE="[absolute path to source directory]"
+#SOURCE=("[array. absolute path to source directory]")
 #DESTINATION="[absolute path to backup destination]/$HOST"
 #DESTINATION_VOLUME="[absolute path to backup volume]"
 #EXCLUDE="[option. absolute path to exclude ]" 
@@ -98,7 +98,7 @@ else
                  --delete-excluded \
                  --link-dest="$DESTINATION"/Latest \
                  "${SOURCE[@]}" "$DESTINATION"/$DATE_FORMAT \
-                  | indent | log_prefix
+                 | indent | log_prefix
   fi
 fi
 
