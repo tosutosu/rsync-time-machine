@@ -1,0 +1,88 @@
+#!/bin/bash
+
+#SOURCE=("[array. absolute path to source directory]")
+#DESTINATION="[absolute path to backup destination]/$HOST"
+#DESTINATION_VOLUME="[absolute path to backup volume]"
+#EXCLUDE="[option. absolute path to exclude ]" 
+
+export APPNAME=$(basename "${0}")
+export LOG_APPNAME_DISABLE="YES"
+export DISABLE_COLOR="YES"
+
+export TIMEOUT=600
+## --------------------------------------------------
+## main
+## --------------------------------------------------
+if ! source ~/bin/echo_log.sh ; then
+    exit 1
+fi
+
+## check parameter
+check="true"
+if ! source ~/bin/echo_log.sh ; then
+  check="false"
+fi
+if [ ${#SOURCE[@]} -gt 0 ]; then
+  for source in "${SOURCE[@]}"; do
+    if [ ! -e "$source" ]; then
+      log_error "ソースディレクトリが見つかりません. ${source}"
+      check="false"
+    fi
+  done
+else
+  log_error "ソースディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION" ]; then
+  log_error "バックアップディレクトリが指定されていません"
+  check="false"
+fi
+if [ -z "$DESTINATION_VOLUME" ] ; then
+  log_error "バックアップ先ボリュームが指定されていません"
+  check="false"
+else
+  if [ ! -d "$DESTINATION_VOLUME" ] ; then
+    ## ボリュームがマウントされていない.
+    check="false"
+  fi
+fi
+if [ "${EXCLUDE:+xxx}" = "xxx" ]; then
+  if [ ! -r "$EXCLUDE" ]; then
+    log_error "excludeファイルが見つかりません"
+    check="false"
+  fi
+fi
+if [ "$check" = "false" ]; then
+    exit 1
+fi
+
+# Create destination if it does not exist
+if [[ ! -d "$DESTINATION" ]] ; then
+  mkdir -p "$DESTINATION"
+  log_info "mkdir -p $DESTINATION"
+fi
+
+## TimeMachine稼働の確認
+[ ! -x ~/bin/wait_for_backup_process.sh ] && exit 1
+if ! ~/bin/wait_for_backup_process.sh ; then
+    log_info "他のバックアップ処理の終了を待機しています"
+    ## スリープ
+    if ! ~/bin/wait_for_backup_process.sh -S; then
+        log_warn "他のバックアップ処理の待機時間を超過しました. exit 1"
+        exit 1
+    fi
+fi
+
+## vmwareの確認
+declare -i vmwareRun=$(ps aux | grep -v grep | grep -c vmware-vmx)
+if [ ${vmwareRun} -gt 0 ]; then
+    log_warn "vmwareが起動中です. 処理を中断します. exit 1"
+    exit 1
+fi
+
+## 実行ファイル
+log_info "バックアップを開始します"
+declare -i start_time=$(date +%s)
+~/bin/rsync-time-machine.sh "${SOURCE[@]}"
+declare -i processing_time=$(( $(date +%s) - start_time ))
+log_info "バックアップが完了しました (処理時間 ${processing_time}sec)"

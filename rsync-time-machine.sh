@@ -27,7 +27,15 @@ check="true"
 if ! source ~/bin/echo_log.sh ; then
   check="false"
 fi
-if [ -z "$SOURCE" ]; then
+if [ $# -gt 0 ]; then
+  SOURCE=("$@")
+  for source in "${SOURCE[@]}"; do
+    if [ ! -e "$source" ]; then
+      log_error "ソースディレクトリが見つかりません. ${source}"
+      check="false"
+    fi
+  done
+else
   log_error "ソースディレクトリが指定されていません"
   check="false"
 fi
@@ -44,6 +52,12 @@ else
     check="false"
   fi
 fi
+if [ "${EXCLUDE:+xxx}" = "xxx" ]; then
+  if [ ! -r "$EXCLUDE" ]; then
+    log_error "excludeファイルが見つかりません"
+    check="false"
+  fi
+fi
 if [ "$check" = "false" ]; then
     exit 1
 fi
@@ -51,26 +65,41 @@ fi
 # Create destination if it does not exist
 if [[ ! -d "$DESTINATION" ]] ; then
   mkdir -p "$DESTINATION"
-fi
-
-if [ "${EXCLUDE:+xxx}" = "xxx" ]; then
-  EXCLUDE="--exclude-from=${EXCLUDE}"
+  log_info "mkdir -p $DESTINATION"
 fi
 
 # Make inital backup if Latest does not exist, otherwise only copy what has changed
 # and hard link to files that are the same
 if [[ ! -L "$DESTINATION"/Latest ]] ; then
-  rsync $RSYNC_OPTIONS \
-                --delete \
-                "$EXCLUDE" \
-                "$SOURCE" "$DESTINATION"/$DATE_FORMAT
+  if [ -n "$EXCLUDE" ]; then
+    rsync $RSYNC_OPTIONS \
+                  --delete \
+                  --exclude-from="$EXCLUDE" \
+                  "${SOURCE[@]}" "$DESTINATION"/$DATE_FORMAT \
+                   | indent | log_prefix
+  else
+    rsync $RSYNC_OPTIONS \
+                  --delete \
+                  "${SOURCE[@]}" "$DESTINATION"/$DATE_FORMAT \
+                   | indent | log_prefix
+  fi
 else
-  rsync $RSYNC_OPTIONS \
-               --delete \
-               --delete-excluded \
-               "$EXCLUDE" \
-               --link-dest="$DESTINATION"/Latest \
-               "$SOURCE" "$DESTINATION"/$DATE_FORMAT
+  if [ -n "$EXCLUDE" ]; then
+    rsync $RSYNC_OPTIONS \
+                 --delete \
+                 --delete-excluded \
+                 --exclude-from="$EXCLUDE" \
+                 --link-dest="$DESTINATION"/Latest \
+                 "${SOURCE[@]}" "$DESTINATION"/$DATE_FORMAT \
+                  | indent | log_prefix
+  else
+    rsync $RSYNC_OPTIONS \
+                 --delete \
+                 --delete-excluded \
+                 --link-dest="$DESTINATION"/Latest \
+                 "${SOURCE[@]}" "$DESTINATION"/$DATE_FORMAT \
+                  | indent | log_prefix
+  fi
 fi
 
 # Remove symlink to previous Latest backup
